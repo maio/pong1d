@@ -13,6 +13,8 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(
 
 typedef enum {LEFT, RIGHT} side_type;
 
+bool quit = false;
+
 struct Button {
   int pin;
   bool down;    // button has been released just now
@@ -176,6 +178,14 @@ void updateBall(Ball *ball, unsigned int td) {
 
 void update(unsigned int td) {
   updateBall(&ball, td);
+  if (p1.lives == 0) {
+    p2.lives = PIXELS;
+    quit = true;
+  }
+  if (p2.lives == 0) {
+    p1.lives = PIXELS;
+    quit = true;
+  }
 }
 
 void loop() {
@@ -192,7 +202,9 @@ void loop() {
     lastRefreshTime = now;
 
     processInput();
-    update(td);
+    if (!quit) {
+      update(td);      
+    }
     draw();
   }
 }
