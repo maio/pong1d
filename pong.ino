@@ -1,8 +1,11 @@
 #include <Adafruit_NeoPixel.h>
+#include "pitches.h"
+#include "melodies.h"
 
 #define PIXELS 15
 #define LED_PIN 14
 #define BUTTON1_PIN 12
+#define SPEAKER_PIN 4
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(
   PIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -27,6 +30,7 @@ struct Player p2;
 struct Ball ball;
 
 void setup() {
+  playMelody1(SPEAKER_PIN);
   pinMode(BUTTON1_PIN, INPUT);
 
   strip.begin();
