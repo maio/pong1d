@@ -4,13 +4,21 @@
 
 #define PIXELS 15
 #define LED_PIN 14
-#define BUTTON1_PIN 12
+#define BUTTON1_PIN 15
+#define BUTTON2_PIN 12
 #define SPEAKER_PIN 4
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(
   PIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 typedef enum {LEFT, RIGHT} side_type;
+
+struct Button {
+  int pin;
+  bool down;    // button has been released just now
+  bool up;      // button has been pressed just now
+  bool isPressed; // button is being pressed
+};
 
 struct Player {
   uint32_t color;
@@ -25,13 +33,23 @@ struct Ball {
   float speed; // pixels/s
 };
 
+struct Button button1;
+struct Button button2;
 struct Player p1;
 struct Player p2;
 struct Ball ball;
 
 void setup() {
+  button1 = (Button) {
+    .pin = BUTTON1_PIN
+  };
+  
+  button2 = (Button) {
+    .pin = BUTTON2_PIN
+  };
+  
   playMelody1(SPEAKER_PIN);
-  pinMode(BUTTON1_PIN, INPUT);
+  pinMode(button1.pin, INPUT);
 
   strip.begin();
   strip.setBrightness(5);
@@ -46,13 +64,13 @@ void setup() {
 
   p1 = (Player) {
     .color = strip.Color(255, 0, 0),
-    .lives = 2,
+    .lives = 3,
     .side = LEFT,
   };
 
   p2 = (Player) {
     .color = strip.Color(0, 0, 255),
-    .lives = 2,
+    .lives = 3,
     .side = RIGHT
   };
 }
@@ -93,18 +111,29 @@ const int refreshInterval = 16; // 60 FPS
 // Used to calculate the delta between loops for a steady frame-rate
 unsigned long lastRefreshTime = 0;
 
-int button1StatePrev = 0;
-int button1State = 0;
-bool button1Up = false;
+void processButtonInput(Button *button) {
+  bool prevPressed = button->isPressed;
+
+  int state = digitalRead(button->pin);
+  bool newPressed = state == HIGH;
+  
+  if (prevPressed && !newPressed) { // just released
+    button->up = true;
+    button->down = false;
+  } else if (!prevPressed && newPressed) { // just pressed
+    button->up = false;
+    button->down = true;    
+  } else {
+    button->up = false;
+    button->down = false; 
+  }
+
+  button->isPressed = newPressed;
+}
 
 void processInput() {
-  // Button 1
-  button1Up = false;
-  button1State = digitalRead(BUTTON1_PIN);
-  if (button1State == LOW && button1StatePrev == HIGH) {
-    button1Up = true;
-  }
-  button1StatePrev = button1State;
+  processButtonInput(&button1);
+  processButtonInput(&button2);
 }
 
 void draw() {
@@ -118,25 +147,26 @@ void draw() {
 void updateBall(Ball *ball, unsigned int td) {
   float moveBy = ball->speed * (td / (float) 1000);
 
+  if (button1.down && ball->direction == LEFT && (ball->position <= 3)) {
+    ball->direction = RIGHT;
+  }
+  if (button2.down && ball->direction == RIGHT && (ball->position >= (PIXELS - 1 - 3))) {
+    ball->direction = LEFT;
+  }
+
   switch (ball->direction) {
     case LEFT:
-      if (ball->position <= 0) {
-        ball->direction = RIGHT;
-        return updateBall(ball, td);
-      }
       ball->position = ball->position - moveBy;
       if (ball->position < 0) {
+        p1.lives = p1.lives - 1;
         ball->direction = RIGHT;
         ball->position = ball->position * -1;
       }
       break;
     case RIGHT:
-      if (ball->position >= PIXELS - 1) {
-        ball->direction = LEFT;
-        return updateBall(ball, td);
-      }
       ball->position = ball->position + moveBy;
       if (ball->position > PIXELS - 1) {
+        p2.lives = p2.lives - 1;
         ball->direction = LEFT;
         ball->position = (float) (PIXELS - 1) - ((float) (PIXELS - 1) - ball->position);
       }
@@ -162,9 +192,6 @@ void loop() {
     lastRefreshTime = now;
 
     processInput();
-    if (button1Up && ball.direction == LEFT) {
-      ball.direction = RIGHT;
-    }
     update(td);
     draw();
   }
