@@ -2,11 +2,12 @@
 #include "pitches.h"
 #include "melodies.h"
 
-#define PIXELS 15
+#define PIXELS 105
+#define SPEEDUP 1.2
 #define LED_PIN 14
-#define BUTTON1_PIN 15
-#define BUTTON2_PIN 12
-#define SPEAKER_PIN 4
+#define BUTTON1_PIN 16
+#define BUTTON2_PIN 15
+#define SPEAKER_PIN 13
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(
   PIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -59,9 +60,9 @@ void setup() {
 
   ball = (Ball) {
     .color = strip.Color(0, 255, 0),
-    .position = 7,
+    .position = PIXELS / 2,
     .direction = LEFT,
-    .speed = 10
+    .speed = PIXELS / 5
   };
 
   p1 = (Player) {
@@ -148,11 +149,14 @@ void draw() {
 
 void updateBall(Ball *ball, unsigned int td) {
   float moveBy = ball->speed * (td / (float) 1000);
+  int foo = 7;
 
-  if (button1.down && ball->direction == LEFT && (ball->position <= 3)) {
+  if ((button1.down || button1.up) && ball->direction == LEFT && (ball->position <= foo)) {
+    ball->speed = ball->speed * SPEEDUP;
     ball->direction = RIGHT;
   }
-  if (button2.down && ball->direction == RIGHT && (ball->position >= (PIXELS - 1 - 3))) {
+  if ((button2.down || button2.up) && ball->direction == RIGHT && (ball->position >= (PIXELS - foo))) {
+    ball->speed = ball->speed * SPEEDUP;
     ball->direction = LEFT;
   }
 
